@@ -1,0 +1,224 @@
+<%- include('partials/head', { title: 'Role Config' }) %>
+<style>
+  .role-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px; margin-bottom:14px; }
+  .role-card-header { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .role-dot { width:13px; height:13px; border-radius:50%; flex-shrink:0; }
+  .role-label { font-size:14px; font-weight:700; color:var(--text); }
+  .role-id    { font-size:11px; color:var(--text3); font-family:'JetBrains Mono',monospace; margin-top:1px; }
+  .builtin-badge { font-size:9px; padding:1px 7px; background:rgba(99,102,241,.15); color:var(--accent-l); border-radius:3px; font-weight:600; letter-spacing:.3px; text-transform:uppercase; }
+  .perm-section { margin-bottom:14px; }
+  .perm-section-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--text3); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .perm-section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+  .perm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:6px; }
+  .perm-item {
+    display:flex; align-items:center; gap:8px; padding:7px 11px;
+    border-radius:7px; background:var(--surface2); border:1px solid var(--border);
+    font-size:12px; color:var(--text2); cursor:pointer; transition:all .15s; user-select:none;
+  }
+  .perm-item:hover { border-color:var(--border2); color:var(--text); background:var(--surface3); }
+  .perm-item.on { border-color:var(--accent); background:var(--accent-dim); color:var(--accent-l); }
+  .perm-item.on .perm-check { background:var(--accent); border-color:var(--accent); }
+  .perm-item.on .perm-check::after { content:''; display:block; width:7px; height:7px; background:#fff; border-radius:1px; clip-path:polygon(14% 44%,0 65%,50% 100%,100% 16%,80% 0,43% 62%); }
+  .perm-check { width:15px; height:15px; border-radius:3px; border:1.5px solid var(--border2); flex-shrink:0; transition:all .15s; display:flex; align-items:center; justify-content:center; }
+  .new-role-form { background:var(--surface2); border:1px dashed var(--border2); border-radius:var(--radius-lg); padding:18px; margin-bottom:14px; }
+  .save-indicator { font-size:11px; color:var(--text3); display:none; margin-left:auto; }
+  .save-indicator.saving { display:block; color:var(--accent-l); }
+  .save-indicator.saved  { display:block; color:var(--green); }
+</style>
+<div class="app-shell">
+  <%- include('partials/sidebar') %>
+  <div class="main-area">
+    <header class="top-header">
+      <div class="page-title">Role Configuration</div>
+      <div class="header-actions">
+        <span style="font-size:12px;color:var(--text3);">Page &amp; card permissions take effect immediately</span>
+        <button class="btn btn-secondary btn-sm" onclick="toggleNewForm()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Role
+        </button>
+      </div>
+    </header>
+    <div class="page-content">
+
+      <!-- New Role Form -->
+      <div class="new-role-form" id="new-role-form" style="display:none;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px;">Create Custom Role</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:14px;">
+          <div class="form-group" style="margin:0"><label class="form-label">Role ID</label><input type="text" id="nr-id" class="form-input" placeholder="e.g. operator"/></div>
+          <div class="form-group" style="margin:0"><label class="form-label">Display Label</label><input type="text" id="nr-label" class="form-input" placeholder="e.g. Operator"/></div>
+          <div class="form-group" style="margin:0"><label class="form-label">Badge Color</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="color" id="nr-color" value="#6366f1" style="width:38px;height:36px;border:none;background:none;cursor:pointer;border-radius:4px;padding:0;"/>
+              <span id="nr-color-preview" style="font-size:12px;color:var(--text2);">#6366f1</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" onclick="createRole()">Create</button>
+            <button class="btn btn-secondary btn-sm" onclick="toggleNewForm()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role Cards -->
+      <% const roleNames = Object.keys(rolesData); %>
+      <% roleNames.forEach(function(roleName) { %>
+      <% const role = rolesData[roleName]; %>
+      <div class="role-card" id="role-card-<%=roleName%>">
+        <div class="role-card-header">
+          <div class="role-dot" id="dot-<%=roleName%>" style="background:<%=role.color||'#6b7280'%>"></div>
+          <div style="flex:1;">
+            <div class="role-label" id="label-display-<%=roleName%>"><%=role.label||roleName%></div>
+            <div class="role-id"><%=roleName%></div>
+          </div>
+          <span id="save-ind-<%=roleName%>" class="save-indicator"></span>
+          <% if (role.isBuiltIn) { %><span class="builtin-badge">built-in</span><% } %>
+          <% if (!role.isBuiltIn) { %>
+          <button class="btn btn-danger btn-xs" onclick="deleteRole('<%=roleName%>')">Delete</button>
+          <% } %>
+          <button class="btn btn-primary btn-sm" onclick="saveRole('<%=roleName%>')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+            Save
+          </button>
+        </div>
+
+        <!-- Color + label editors (for built-in and custom) -->
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;">
+            <label style="font-size:11px;color:var(--text3);font-weight:500;">Label:</label>
+            <input type="text" class="form-input" id="label-<%=roleName%>" value="<%=role.label||roleName%>" style="max-width:200px;padding:5px 10px;"/>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="font-size:11px;color:var(--text3);font-weight:500;">Color:</label>
+            <input type="color" id="color-<%=roleName%>" value="<%=role.color||'#6b7280'%>" style="width:32px;height:30px;border:none;background:none;cursor:pointer;border-radius:4px;padding:0;" oninput="document.getElementById('dot-<%=roleName%>').style.background=this.value"/>
+          </div>
+        </div>
+
+        <!-- Pages -->
+        <div class="perm-section">
+          <div class="perm-section-label">Pages</div>
+          <div class="perm-grid">
+            <% allPages.forEach(function(page) { %>
+            <% const isOn = (role.pages||[]).includes(page.id); %>
+            <div class="perm-item <%=isOn?'on':''%>" data-role="<%=roleName%>" data-type="page" data-id="<%=page.id%>" onclick="togglePerm(this)">
+              <div class="perm-check"></div>
+              <span><%=page.label%></span>
+              <% if (page.adminOnly) { %><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;opacity:.4"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><% } %>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+
+        <!-- Cards (grouped by section) -->
+        <%
+          const sections = [...new Set(allCards.map(c=>c.section))];
+        %>
+        <% sections.forEach(function(section) { %>
+        <div class="perm-section">
+          <div class="perm-section-label"><%=section%></div>
+          <div class="perm-grid">
+            <% allCards.filter(c=>c.section===section).forEach(function(card) { %>
+            <% const isOn = (role.cards||[]).includes(card.id); %>
+            <div class="perm-item <%=isOn?'on':''%>" data-role="<%=roleName%>" data-type="card" data-id="<%=card.id%>" onclick="togglePerm(this)">
+              <div class="perm-check"></div>
+              <span><%=card.label%></span>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+      <% }) %>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Toggle perm item ────────────────────────────────────────────────────────
+function togglePerm(el) {
+  el.classList.toggle('on');
+}
+
+function getPerms(roleName, type) {
+  return [...document.querySelectorAll(
+    '[data-role="'+roleName+'"][data-type="'+type+'"].on'
+  )].map(el => el.dataset.id);
+}
+
+function toggleNewForm() {
+  const f = document.getElementById('new-role-form');
+  f.style.display = f.style.display === 'none' ? '' : 'none';
+}
+
+// Color preview in "new role" form
+const nrColorInput = document.getElementById('nr-color');
+if (nrColorInput) {
+  nrColorInput.addEventListener('input', function() {
+    const preview = document.getElementById('nr-color-preview');
+    if (preview) preview.textContent = this.value;
+  });
+}
+
+// ── Save role ────────────────────────────────────────────────────────────────
+async function saveRole(name) {
+  const pages  = getPerms(name, 'page');
+  const cards  = getPerms(name, 'card');
+  const label  = document.getElementById('label-' + name)?.value || name;
+  const color  = document.getElementById('color-' + name)?.value || '#6b7280';
+
+  const ind = document.getElementById('save-ind-' + name);
+  if (ind) { ind.textContent = 'Saving…'; ind.className = 'save-indicator saving'; }
+
+  try {
+    const r = await fetch('/api/role-config/' + encodeURIComponent(name), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label, color, pages, cards }),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(d.error || 'Save failed', 'error'); if(ind){ind.textContent='Failed';ind.className='save-indicator';} return; }
+
+    // Update dot color immediately
+    const dot = document.getElementById('dot-' + name);
+    if (dot) dot.style.background = color;
+    const labelDisplay = document.getElementById('label-display-' + name);
+    if (labelDisplay) labelDisplay.textContent = label;
+
+    if (ind) { ind.textContent = 'Saved ✓'; ind.className = 'save-indicator saved'; setTimeout(()=>{ind.style.display='none';ind.className='save-indicator';},2500); }
+    toast('"' + name + '" permissions saved — takes effect on next page load', 'success');
+  } catch(e) {
+    toast('Network error', 'error');
+    if (ind) { ind.textContent='Error'; ind.className='save-indicator'; }
+  }
+}
+
+// ── Create role ──────────────────────────────────────────────────────────────
+async function createRole() {
+  const id    = document.getElementById('nr-id').value.trim();
+  const label = document.getElementById('nr-label').value.trim();
+  const color = document.getElementById('nr-color').value;
+  if (!id) { toast('Role ID is required', 'error'); return; }
+
+  const r = await fetch('/api/role-config/' + encodeURIComponent(id), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label: label || id, color, pages:[], cards:[] }),
+  });
+  const d = await r.json();
+  if (!r.ok) { toast(d.error || 'Create failed', 'error'); return; }
+  toast('Role "' + id + '" created', 'success');
+  location.reload();
+}
+
+// ── Delete role ──────────────────────────────────────────────────────────────
+async function deleteRole(name) {
+  if (!confirm('Delete role "' + name + '"?\nUsers assigned this role will keep the role name but lose all page access until reassigned.')) return;
+  const r = await fetch('/api/role-config/' + encodeURIComponent(name), { method: 'DELETE' });
+  const d = await r.json();
+  if (!r.ok) { toast(d.error || 'Delete failed', 'error'); return; }
+  toast('Role "' + name + '" deleted', 'success');
+  const card = document.getElementById('role-card-' + name);
+  if (card) { card.style.opacity='0'; card.style.transition='opacity .2s'; setTimeout(()=>card.remove(),200); }
+}
+</script>
+</body></html>

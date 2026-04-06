@@ -11,7 +11,7 @@
 ### macOS / Linux (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/your-org/blorq/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/blroq/blorq-cli/main/install.sh | bash
 ```
 
 Then start it:
@@ -23,7 +23,7 @@ blorq start
 ### Windows (PowerShell)
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/your-org/blorq/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/blroq/blorq-cli/main/install.ps1 | iex
 ```
 
 ### npm (global)
