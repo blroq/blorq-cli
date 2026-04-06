@@ -1,12 +1,37 @@
 <div align="center">
-  <img src="views/logo.png" alt="Blorq" height="64"/>
-  <h1>Blorq</h1>
-  <p><strong>Production-grade, open-source log aggregator.<br/>One command to install. Runs as a system service on macOS, Linux & Windows.</strong></p>
+  <img src="views/logo.png" alt="Blorq" height="72"/>
+  <h1>blorq-cli</h1>
+  <p><strong>Production-grade, open-source log aggregator.</strong><br/>One command to install. Runs as a system service on macOS, Linux & Windows.</p>
+
+  <a href="https://www.npmjs.com/package/blorq"><img src="https://img.shields.io/npm/v/blorq?color=blue&label=npm" alt="npm version"/></a>
+  <a href="https://www.npmjs.com/package/blorq"><img src="https://img.shields.io/npm/dm/blorq?color=blue" alt="npm downloads"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"/></a>
+  <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey" alt="Platforms"/>
 </div>
 
 ---
 
-## Install
+## Table of Contents
+
+- [Installation](#installation)
+  - [macOS / Linux (recommended)](#macos--linux-recommended)
+  - [Windows (PowerShell)](#windows-powershell)
+  - [npm (global)](#npm-global)
+  - [npx (no install)](#npx-no-install)
+  - [Docker](#docker)
+- [Quick Start](#quick-start)
+- [CLI Reference](#cli-reference)
+- [Auto-start on Boot](#auto-start-on-boot)
+- [Add to Your Node.js App](#add-to-your-nodejs-app)
+- [Configuration](#configuration)
+- [Features](#features)
+- [File Layout](#file-layout)
+- [Security Checklist](#security-checklist)
+- [License](#license)
+
+---
+
+## Installation
 
 ### macOS / Linux (recommended)
 
@@ -14,10 +39,11 @@
 curl -fsSL https://raw.githubusercontent.com/blroq/blorq-cli/main/install.sh | bash
 ```
 
-Then start it:
+Start immediately:
+
 ```bash
 blorq start
-# → http://localhost:9900   admin / admin123
+# → Dashboard: http://localhost:9900   (admin / admin123)
 ```
 
 ### Windows (PowerShell)
@@ -30,14 +56,14 @@ iwr -useb https://raw.githubusercontent.com/blroq/blorq-cli/main/install.ps1 | i
 
 ```bash
 npm install -g blorq
-blorq setup   # create data/, .env, default users
+blorq setup   # creates data/, .env, and default users
 blorq start
 ```
 
-### npx (no install needed)
+### npx (no install)
 
 ```bash
-npx blorq start   # downloads and runs immediately
+npx blorq start   # downloads and runs immediately — no global install required
 ```
 
 ### Docker
@@ -53,70 +79,94 @@ docker run -d \
   ghcr.io/your-org/blorq:latest
 ```
 
+Or with Docker Compose:
+
 ```bash
-# Or with docker-compose:
 docker compose up -d
 ```
 
 ---
 
-## CLI reference
+## Quick Start
 
-```
-blorq start                   Start in foreground
-blorq start --background      Start in background (daemon)
-blorq start --port 8080       Custom port
-blorq stop                    Stop background instance
-blorq restart                 Restart background instance
-blorq status                  Show running status + PID
-blorq setup                   First-run: create data/, .env, users
-blorq open                    Open dashboard in browser
+After installation, open the dashboard:
 
-blorq service install         Register as OS service (starts on boot)
-blorq service uninstall       Remove OS service
-blorq service start           Start OS service
-blorq service stop            Stop OS service
-blorq service restart         Restart OS service
-blorq service logs            Tail service logs
+| | |
+|---|---|
+| **URL** | `http://localhost:9900` |
+| **Username** | `admin` |
+| **Password** | `admin123` |
 
-blorq --version
-blorq --help
-```
-
-### Auto-start on boot
-
-```bash
-blorq service install
-# macOS  → launchd plist in ~/Library/LaunchAgents/
-# Linux  → systemd user unit  (~/.config/systemd/user/blorq.service)
-# Windows→ Windows Service via sc.exe (run as Administrator)
-```
-
----
-
-## Quick start after install
-
-```
-URL:      http://localhost:9900
-Login:    admin / admin123
-```
-
-1. Open the dashboard → you'll see an empty state
-2. Go to **API Keys** → create a key with `logs:write` scope
+1. Open the dashboard — you'll see an empty state.
+2. Navigate to **API Keys** → create a key with the `logs:write` scope.
 3. Send your first log:
 
 ```bash
 curl -X POST http://localhost:9900/api/logs \
   -H "Content-Type: application/json" \
   -H "X-Api-Key: blq_your_key" \
-  -d '{"appName":"test","logs":["{\"level\":\"info\",\"message\":\"Hello Blorq!\",\"ts\":\"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'\"}"]}' 
+  -d '{
+    "appName": "test",
+    "logs": ["{\"level\":\"info\",\"message\":\"Hello Blorq!\",\"ts\":\"2024-01-15T10:00:00Z\"}"]
+  }'
 ```
 
-4. Refresh the dashboard — your service appears.
+4. Refresh the dashboard — your service appears in the list.
 
 ---
 
-## Add to your Node.js app
+## CLI Reference
+
+```
+USAGE
+  blorq <command> [options]
+
+PROCESS MANAGEMENT
+  blorq start                     Start server in foreground
+  blorq start --background        Start server as a background daemon
+  blorq start --port <port>       Start on a custom port (default: 9900)
+  blorq stop                      Stop the background instance
+  blorq restart                   Restart the background instance
+  blorq status                    Show running status and PID
+
+SETUP
+  blorq setup                     First-run: create data/, .env, and default users
+  blorq open                      Open the dashboard in your default browser
+
+OS SERVICE (auto-start on boot)
+  blorq service install           Register as an OS service
+  blorq service uninstall         Remove the OS service
+  blorq service start             Start the OS service
+  blorq service stop              Stop the OS service
+  blorq service restart           Restart the OS service
+  blorq service logs              Tail OS service logs
+
+INFO
+  blorq --version                 Print version number
+  blorq --help                    Print this help message
+```
+
+---
+
+## Auto-start on Boot
+
+Register Blorq as a persistent OS service so it survives reboots:
+
+```bash
+blorq service install
+```
+
+| Platform | Method | Location |
+|---|---|---|
+| **macOS** | launchd | `~/Library/LaunchAgents/` |
+| **Linux** | systemd user unit | `~/.config/systemd/user/blorq.service` |
+| **Windows** | Windows Service via `sc.exe` | Run as Administrator |
+
+---
+
+## Add to Your Node.js App
+
+Install the companion logger package:
 
 ```bash
 npm install blorq-logger
@@ -126,41 +176,42 @@ npm install blorq-logger
 const logger = require('blorq-logger');
 
 logger.configure({
-  appName:  'my-api',
-  remoteUrl:'http://localhost:9900/api/logs',
-  apiKey:   'blq_your_key',
+  appName:   'my-api',
+  remoteUrl: 'http://localhost:9900/api/logs',
+  apiKey:    process.env.BLORQ_API_KEY,
 });
 
-// Express: one line for request metrics
-app.use(logger.express());
+// Express: one-line request metrics middleware
+app.use(logger.requestLogger());
 
 // Structured logging
 logger.info('Server started', { port: 3000 });
 logger.error('DB timeout', new Error('Connection refused'));
 
-// Or intercept existing console.log calls
-logger.install();  // all console.* now ship to Blorq
+// Drop-in console patch — all console.* calls ship to Blorq automatically
+logger.install();
 ```
 
-See [blorq-logger](./client/logger.js) for Next.js, Fastify, NestJS, plain Node adapters.
+See the [blorq-logger](https://www.npmjs.com/package/blorq-logger) package for full docs covering Next.js, Fastify, Koa, NestJS, and plain Node adapters.
 
 ---
 
 ## Configuration
 
-All config via environment variables or `.env` file (auto-loaded):
+All configuration is via environment variables or a `.env` file (auto-loaded from the install directory):
 
 ```env
-# .env  (in your Blorq install directory)
+# .env
+
 PORT=9900
-DATA_DIR=./data          # users, keys, roles, settings
-LOG_BASE_DIR=./logs      # ingested log files
+DATA_DIR=./data           # users, keys, roles, settings
+LOG_BASE_DIR=./logs       # ingested log files
 JWT_SECRET=your-32-char-secret
 RETENTION_DAYS=7
 NODE_ENV=production
 ```
 
-See [.env.example](.env.example) for all options.
+See [`.env.example`](.env.example) for the full list of available options.
 
 ---
 
@@ -168,53 +219,53 @@ See [.env.example](.env.example) for all options.
 
 | Feature | Details |
 |---|---|
-| **RBAC** | Built-in admin/viewer + unlimited custom roles |
-| **API Key Management** | Multi-key, SHA-256 hashed, scopes, expiry, revoke |
-| **IP Whitelist** | Restrict ingest endpoint to specific IPs / /24 ranges |
-| **2FA (TOTP)** | Per-user optional TOTP via Google Authenticator |
+| **RBAC** | Built-in admin/viewer roles + unlimited custom roles |
+| **API Key Management** | Multi-key, SHA-256 hashed, per-key scopes, expiry & revoke |
+| **IP Whitelist** | Restrict ingest endpoint to specific IPs or `/24` ranges |
+| **2FA (TOTP)** | Per-user optional TOTP — compatible with Google Authenticator |
 | **Log Analytics** | Hourly charts, level breakdown, 7-day trend, top services |
 | **API Analytics** | Per-endpoint latency, error rates, trend analysis |
-| **Real-time Stream** | SSE live log feed |
-| **Drag & Drop Dashboard** | Rearrange widgets, role-based card visibility |
-| **User Management** | Create/delete/reset passwords/revoke 2FA in UI |
-| **Role Config** | Visual per-role page + card permissions |
+| **Real-time Stream** | SSE live log feed for instant visibility |
+| **Drag & Drop Dashboard** | Rearrange widgets; role-based card visibility |
+| **User Management** | Create/delete users, reset passwords, revoke 2FA — all from the UI |
+| **Role Config** | Visual per-role page and card-level permissions |
 
 ---
 
-## File layout
+## File Layout
 
 ```
-~/.blorq/           # runtime files (macOS/Linux default)
-  blorq.pid         # PID of background process
-  blorq.log         # stdout from background process
-  stdout.log        # service stdout (when using blorq service)
-  stderr.log        # service stderr
+~/.blorq/                   # runtime files (macOS/Linux default)
+  blorq.pid                 # PID of background process
+  blorq.log                 # stdout from background process
+  stdout.log                # service stdout (when using blorq service)
+  stderr.log                # service stderr
 
 [install dir]/
-  bin/blorq         # CLI binary
-  data/             # users.json, api-keys.json, settings.json, role-config.json
-  logs/             # ingested log files (one dir per service, one file per day)
-  server.js         # HTTP server entry point
-  config/index.js   # all configuration
-  ...
+  bin/blorq                 # CLI binary
+  data/                     # users.json, api-keys.json, settings.json, role-config.json
+  logs/                     # ingested logs (one dir per service, one file per day)
+  server.js                 # HTTP server entry point
+  config/index.js           # all configuration
 ```
 
 ---
 
-## Security checklist for production
+## Security Checklist
+
+Before exposing Blorq in a production environment:
 
 ```
-✅ Set JWT_SECRET to ≥32 random chars
-✅ NODE_ENV=production
-✅ Change default admin/viewer passwords
-✅ Create per-service API keys with minimal scopes
-✅ Put Blorq behind a reverse proxy (nginx/caddy) with TLS
-✅ Mount data/ and logs/ as persistent volumes (Docker)
+✅ Set JWT_SECRET to ≥ 32 random characters
+✅ Set NODE_ENV=production
+✅ Change the default admin and viewer passwords
+✅ Create per-service API keys with the minimum required scopes
+✅ Place Blorq behind a reverse proxy (nginx / Caddy) with TLS
+✅ Mount data/ and logs/ as persistent volumes when using Docker
 ```
 
 ---
 
 ## License
 
-MIT — free to use, modify, and distribute.
-# blorq-cli
+[MIT](LICENSE) — free to use, modify, and distribute.
