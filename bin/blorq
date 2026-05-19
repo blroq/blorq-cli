@@ -179,16 +179,17 @@ function cmdStop() {
 }
 
 // ─── restart ──────────────────────────────────────────────────────────────
-function cmdRestart() {
+async function cmdRestart() {
   const pid = readPid();
   if (isRunning(pid)) {
     info('Stopping current instance…');
     try { process.kill(pid, 'SIGTERM'); clearPid(); } catch {}
-    // Wait briefly for clean exit
+    // Poll for clean exit — avoids blocking the event loop (was a synchronous spin-wait)
     const deadline = Date.now() + 3000;
-    while (isRunning(pid) && Date.now() < deadline) { /* spin */ }
+    while (isRunning(pid) && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 100));
+    }
   }
-  // Start fresh
   info('Restarting…\n');
   args.push('--background');
   cmdStart();
@@ -524,7 +525,7 @@ function cmdHelp() {
 switch (command) {
   case 'start':           cmdStart();   break;
   case 'stop':            cmdStop();    break;
-  case 'restart':         cmdRestart(); break;
+  case 'restart':         cmdRestart().catch(e => { fail(e.message); process.exit(1); }); break;
   case 'status':          cmdStatus();  break;
   case 'setup':           cmdSetup();   break;
   case 'open':            cmdOpen();    break;

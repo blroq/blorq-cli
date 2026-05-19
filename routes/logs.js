@@ -17,8 +17,11 @@ module.exports.setWriter = function (batchWriter) {
 };
 
 // ── Ingest (API key auth) ────────────────────────────────────────────────
-router.post('/',     validateApiKey, ingestLimit, (req, res) => ctrl.ingest(req, res));
-router.post('/bulk', validateApiKey, ingestLimit, (req, res) => ctrl.ingest(req, res));
+// validateApiKey is a factory — must be called with () to return the actual middleware.
+// Without (), Express receives the factory function itself (not the middleware it produces)
+// and the request hangs forever with no response.
+router.post('/',     validateApiKey(), ingestLimit, (req, res) => ctrl.ingest(req, res));
+router.post('/bulk', validateApiKey(), ingestLimit, (req, res) => ctrl.ingest(req, res));
 
 // ── Read (JWT auth, viewer+) ─────────────────────────────────────────────
 router.get('/services',                   authenticate, (req, res) => ctrl.services(req, res));

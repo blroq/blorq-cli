@@ -34,7 +34,7 @@ class AuthService {
     const jwt_token = jwt.sign(
       { username, role: user.role || 'viewer' },
       config.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: config.JWT_EXPIRES_IN }   // was hardcoded '24h' — now uses JWT_EXPIRES_IN env/config
     );
     logger.info(`[Auth] Login: "${username}" (${user.role || 'viewer'})`);
     return { token: jwt_token, role: user.role || 'viewer', totpEnabled: !!user.totpSecret };
